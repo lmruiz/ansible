@@ -1,0 +1,9 @@
+---
+# This playbook deploys the whole application stack for ClubTandem 
+
+# Apply common configuration to all hosts
+- hosts: localhost
+  connection: local
+  roles:
+  - keypair
+  - vpc

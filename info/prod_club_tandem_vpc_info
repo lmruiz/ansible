@@ -1,0 +1,3 @@
+prod_club_tandem_vpc: vpc-d77fd8b0
+prod_club_tandem_subnet_public: subnet-7a490550
+prod_club_tandem_subnet_private: subnet-7b490551
