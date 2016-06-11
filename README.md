@@ -1,6 +1,5 @@
-Ansible
+# ansible
 
-@author Luis Ruiz
 
 Run with this command:
 	ansible-playbook -i hosts site.yml -e envParam=Prod
@@ -28,3 +27,4 @@ us-east-1a
 us-east-1b
 us-east-1c
 us-east-1e
+
