@@ -6,7 +6,7 @@
 
 Run with this command:
 ```sh
-ansible-playbook -i hosts site.yml -e envParam=Prod
+ansible-playbook -i hosts site.yml -e "envParam=Prod prefix=clubTandem"
 ``` 
 
 ### Info
