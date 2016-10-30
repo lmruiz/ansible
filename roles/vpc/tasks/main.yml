@@ -10,7 +10,7 @@
           az: "{{ az0 }}"
           resource_tags: '{"Name":"{{ prefix }}_subnet_public"}'
         - cidr: 10.0.1.0/24
-          az: "{{ az0 }}"
+          az: "{{ az1 }}"
           resource_tags: '{"Name":"{{ prefix }}_subnet_private"}'
       internet_gateway: True
       route_tables:
