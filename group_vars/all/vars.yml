@@ -2,6 +2,7 @@
 # Variables here are applicable to all host groups
 
 region: us-east-1
-keyname: "clubTandem{{ envParam }}"
+keyname: "{{ prefix }}{{ envParam }}"
+tagname: "{{ prefix }}{{ envParam }}"
 az0: us-east-1a
-az1: us-east-1b
+az1: us-east-1c

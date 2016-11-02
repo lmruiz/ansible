@@ -1,11 +1,11 @@
 ---  
-  - name: create key pair  
+  - name: KEYPAIR | Create key pair  
     local_action:  
       module: ec2_key  
       region: "{{ region }}"
       name: "{{ keyname }}"
 #        state: absent
     register: mykey
-  - name: save private key
-    copy: content="{{ mykey.key.private_key }}" dest="~/.ssh/{{keyname}}.pem" mode=0600
+  - name: KEYPAIR | Save private key
+    copy: content="{{ mykey.key.private_key }}" dest="~/.ssh/{{keyname}}.pem" mode=0400
     when: mykey.changed

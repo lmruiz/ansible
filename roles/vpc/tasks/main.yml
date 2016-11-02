@@ -1,59 +1,74 @@
 ---  
-  - name: NETWORK | create vpc with multi-az subnets   
+  - name: VPC | Create vpc with multi-az subnets   
     local_action:  
       module: ec2_vpc     
       region: "{{ region }}"
       cidr_block: 10.0.0.0/16
-      resource_tags: '{"Name":"{{ prefix }}_vpc"}'
+      resource_tags: '{"Name":"{{ tagname }}_vpc"}'
       subnets:
         - cidr: 10.0.0.0/24
           az: "{{ az0 }}"
-          resource_tags: '{"Name":"{{ prefix }}_subnet_public"}'
+          resource_tags: '{"Name":"{{ tagname }}_subnet_public"}'
         - cidr: 10.0.1.0/24
           az: "{{ az1 }}"
-          resource_tags: '{"Name":"{{ prefix }}_subnet_private"}'
+          resource_tags: '{"Name":"{{ tagname }}_subnet_private"}'
       internet_gateway: True
-      route_tables:
-          - subnets:
-              - 10.0.0.0/24
-            routes:
-              - dest: 0.0.0.0/0
-                gw: igw
     register: vpc
-  - name: INFO | write vpc id to {{ prefix }}_vpc_info file
+  - name: INTERNET GATEWAY | get igw
+    ec2_vpc_igw:
+      vpc_id: "{{ vpc.vpc_id }}"
+      region: "{{ region }}"
+      state: present
+    register: igw
+  - name: Tagging the new internet gateway created
+    ec2_tag:
+      resource: "{{ igw.gateway_id }}"
+      state: present
+      region: "{{ region }}"
+      tags:
+        Name: "{{ tagname }}-gateway"
+  - name: VPC | Write vpc id to {{ prefix }}_vpc_info file
     local_action: shell echo "{{ prefix }}"_vpc":" "{{ vpc.vpc_id }}" > info/"{{ prefix }}"_vpc_info
-  - name: INFO | write subnets id to {{ prefix }}_vpc_info file
+  - name: VPC | write subnets id to {{ tagname }}_vpc_info file
     local_action: shell echo "{{ item.resource_tags.Name }}"":" "{{ item.id }}" 
-                    >> info/"{{ prefix }}"_vpc_info
+                    >> info/"{{ tagname }}"_vpc_info
     with_items: "{{ vpc.subnets }}"
-  - name: ELASTIC IP | allocate a new elastic IP without associating it to anything - 1
-    ec2_eip: in_vpc=yes reuse_existing_ip_allowed=yes state=present region="{{ region }}"
-    register: eip
-  - name: INFO | output vpc info
+  - name: VPC | output vpc info
     debug: msg="VPC info  is {{ vpc }}"
-  - name: INFO | output the IP
-    debug: msg="Allocated IP is {{ eip.public_ip }} , Allocation ID is {{ eip.allocation_id }} "
-  - pause: prompt="Waiting 45 seconds for ELASTIC IP allocation" seconds=45
-  - name: NETWORK | Create NAT instance for public subnet
-    shell: "aws ec2 create-nat-gateway --region {{ region }} --subnet-id {{vpc.subnets[0].id}} --allocation-id {{ eip.allocation_id }}"
-    register: nat_instance_raw
-  - name: INFO | output the NAT gateway
-    debug: msg="NAT gateway info {{ nat_instance_raw }} "
-  - set_fact:
-      nat_instance_json: "{{ nat_instance_raw.stdout|from_json }}"
-  - set_fact:
-      nat_instance: "{{ nat_instance_json.NatGateway.NatGatewayId }}"
-  - name: INFO | output the NAT gateway
-    debug: msg="NAT id {{ nat_instance }} "
-  - name: NETWORK | Create new route table for the private subnet
-    shell: "aws ec2 create-route-table --region {{region}} --vpc-id {{vpc.vpc_id}}"
-    register: routetable_private_raw
-  - set_fact:
-      routetable_private_json: "{{ routetable_private_raw.stdout|from_json }}"
-  - set_fact:
-      routetable_private: "{{ routetable_private_json.RouteTable.RouteTableId }}"
-  - name: NETWORK | Associate route table with private subnet 1
-    shell: "aws ec2 associate-route-table --region {{region}} --route-table-id {{routetable_private}} --subnet-id {{vpc.subnets[1].id}}"
-  - name: NETWORK | Create NAT route record for  private subnet 1
-    shell: "aws ec2 create-route --region {{region}} --route-table-id {{routetable_private}} --destination-cidr-block '0.0.0.0/0' --nat-gateway-id {{nat_instance}}"
-
+  - name: NAT GATEWAY | Create new nat gateway and allocate new Elastic IP.
+    ec2_vpc_nat_gateway:
+      state: present
+      subnet_id: "{{ vpc.subnets[0].id }}"
+      wait: yes
+      region: "{{ region }}"
+    register: nat_gateway
+  - name: NAT GATEWAY | Output nat gateway creation output
+    debug: var=nat_gateway_check
+  - name: ROUTE TABLE | Set up public subnet route table
+    ec2_vpc_route_table:
+      vpc_id: "{{ vpc.vpc_id }}"
+      region: "{{ region }}"
+      tags:
+        Name: "{{ tagname }}PublicSN"
+      subnets:
+        - "{{ vpc.subnets[0].id }}"
+      routes:
+        - dest: 0.0.0.0/0
+          gateway_id: "{{ igw.gateway_id }}"
+    register: public_route_table
+  - name: ROUTE TABLE | Output public route table creation output
+    debug: var=public_route_table
+  - name: ROUTE TABLE | Set up NAT-protected route table
+    ec2_vpc_route_table:
+      vpc_id: "{{ vpc.vpc_id }}"
+      region: "{{ region }}"
+      tags:
+        Name: "{{ tagname }}PrivateSN"
+      subnets:
+        - "{{ vpc.subnets[1].id }}"
+      routes:
+        - dest: 0.0.0.0/0
+          gateway_id: "{{ nat_gateway.nat_gateway_id }}"
+    register: nat_route_table
+  - name: ROUTE TABLE | Output private route table creation output
+    debug: var=nat_route_table
