@@ -7,3 +7,4 @@
   roles:
   - keypair
   - vpc
+  - ec2

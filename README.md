@@ -3,6 +3,7 @@
 > This projets uses Ansible and AWS to deploy a site in a VPC with a private subnet, public subnet, 
 > NAT gateway, jumpbox in the public subnet, RDS, elb and a server in the private subnet
 
+Using Ansible 2.2 (boto 3 required)
 
 Run with this command:
 ```sh

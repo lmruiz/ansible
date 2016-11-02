@@ -6,3 +6,5 @@ keyname: "{{ prefix }}{{ envParam }}"
 tagname: "{{ prefix }}{{ envParam }}"
 az0: us-east-1a
 az1: us-east-1c
+instance_type: t2.micro
+ami_id: ami-b73b63a0
